@@ -29,14 +29,14 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
 
         # 載入模型
         print("  ⏳ 載入重建模型權重...")
-        # model = StudentReconstructiveSubNetwork(in_channels=3, out_channels=3)
-        model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
-        # model.load_state_dict(
-        #     torch.load(os.path.join("student_best" + ".pth"),
-        #                map_location='cuda:0'))
+        model = StudentReconstructiveSubNetwork(in_channels=3, out_channels=3)
         model.load_state_dict(
-            torch.load(os.path.join(checkpoint_path, run_name + ".pckl"),
+            torch.load(os.path.join("student_best" + ".pth"),
                        map_location='cuda:0'))
+        # model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
+        # model.load_state_dict(
+        #     torch.load(os.path.join(checkpoint_path, run_name + ".pckl"),
+        #                map_location='cuda:0'))
         model.cuda()
         model.eval()
 
@@ -87,8 +87,8 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
             true_mask_cv = true_mask.detach().numpy()[0, :, :, :].transpose(
                 (1, 2, 0))
 
-            # gray_rec, _ = model(gray_batch)
-            gray_rec = model(gray_batch)
+            gray_rec, _ = model(gray_batch)
+            # gray_rec = model(gray_batch)
             joined_in = torch.cat((gray_rec.detach(), gray_batch), dim=1)
 
             out_mask = model_seg(joined_in)
@@ -131,22 +131,6 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
             plt.tight_layout()
             plt.savefig(f"{save_root}/comparison_{obj_name}_{i_batch}.png")
             plt.close()
-
-            # # 顯示原始圖
-            # plt.imshow(gray_rec[0].cpu().detach().permute(1, 2, 0).numpy())
-            # plt.title('orignal')
-            # plt.savefig(f"{save_root}/orignal_{obj_name}_{i_batch}.png")
-            # plt.close()
-            # # 顯示預測的異常遮罩
-            # plt.imshow(out_mask_cv)
-            # plt.title('Predicted Anomaly Heatmap')
-            # plt.savefig(f"{save_root}/heatmap_{obj_name}_{i_batch}.png")
-            # plt.close()
-            # # 顯示真實的異常遮罩
-            # plt.imshow(true_mask[0, 0].detach().cpu().numpy(), cmap='hot')
-            # plt.title('true_mask')
-            # plt.savefig(f"{save_root}/true_mask_{obj_name}_{i_batch}.png")
-            # plt.close()
 
             out_mask_averaged = torch.nn.functional.avg_pool2d(
                 out_mask_sm[:, 1:, :, :], 21, stride=1,
