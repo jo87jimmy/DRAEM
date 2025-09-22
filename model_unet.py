@@ -13,6 +13,21 @@ class ReconstructiveSubNetwork(nn.Module):
         output = self.decoder(b5)
         return output
 
+class StudentReconstructiveSubNetwork(nn.Module):
+    def __init__(self, in_channels=3, out_channels=3, base_width=64, teacher_base_width=128):
+            super().__init__()
+            self.encoder = EncoderReconstructive(in_channels, base_width)
+            self.decoder = DecoderReconstructive(base_width, out_channels=out_channels)
+
+    # 特徵對齊層：將學生特徵映射到教師特徵維度
+            self.feature_align = nn.Conv2d(base_width * 8, teacher_base_width * 8, 1)
+
+    def forward(self, x):
+        feats = self.encoder(x)  # 學生編碼器輸出的特徵
+        aligned_feats = self.feature_align(feats)  # 維度對齊，用來和教師特徵做蒸餾 loss
+        output = self.decoder(feats)  # 解碼器輸入仍是原始學生特徵
+        return output, aligned_feats
+
 class DiscriminativeSubNetwork(nn.Module):
     def __init__(self,in_channels=3, out_channels=3, base_channels=64, out_features=False):
         super(DiscriminativeSubNetwork, self).__init__()

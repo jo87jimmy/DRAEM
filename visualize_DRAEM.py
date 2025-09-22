@@ -4,7 +4,7 @@ from data_loader import MVTecDRAEM_Test_Visual_Dataset
 from torch.utils.data import DataLoader
 import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score
-from model_unet import ReconstructiveSubNetwork, DiscriminativeSubNetwork
+from model_unet import ReconstructiveSubNetwork, DiscriminativeSubNetwork,StudentReconstructiveSubNetwork
 import os
 import matplotlib.pyplot as plt
 
@@ -25,8 +25,10 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
 
         # 載入模型
         print("  ⏳ 載入重建模型權重...")
-        model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
-        model.load_state_dict(torch.load(os.path.join(checkpoint_path,run_name+".pckl"), map_location='cuda:0'))
+        model = StudentReconstructiveSubNetwork(in_channels=3, out_channels=3)
+        # model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
+        model.load_state_dict(torch.load(os.path.join("student_best.pth"+".pth"), map_location='cuda:0'))
+        # model.load_state_dict(torch.load(os.path.join(checkpoint_path,run_name+".pckl"), map_location='cuda:0'))
         model.cuda()
         model.eval()
 
@@ -79,7 +81,7 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
             true_mask = sample_batched["mask"]
             true_mask_cv = true_mask.detach().numpy()[0, :, :, :].transpose((1, 2, 0))
 
-            gray_rec = model(gray_batch)
+            gray_rec,_ = model(gray_batch)
             joined_in = torch.cat((gray_rec.detach(), gray_batch), dim=1)
 
             out_mask = model_seg(joined_in)
