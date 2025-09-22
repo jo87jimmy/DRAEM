@@ -57,7 +57,8 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
             for i in range(image.shape[0]):
                 plt.imshow(image[i], cmap='gray')
                 plt.title('Original Image')
-                plt.show()
+                plt.savefig(f"original_{i_batch}_{i}.png")   # 存圖
+                plt.close()
             is_normal = sample_batched["has_anomaly"].detach().numpy()[0 ,0]
             anomaly_score_gt.append(is_normal)
             true_mask = sample_batched["mask"]
