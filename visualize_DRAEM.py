@@ -80,14 +80,6 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
                 print(f"    🔹 Batch {i_batch}/{len(dataloader)}")
 
             gray_batch = sample_batched["image"].cuda()
-            image = gray_batch.permute(0, 2, 3, 1).cpu().numpy()
-
-            # 存原始圖
-            for i in range(image.shape[0]):
-                plt.imshow(image[i], cmap='gray')
-                plt.title('Original Image')
-                plt.savefig(f"original_{obj_name}_{i_batch}_{i}.png")
-                plt.close()
 
             is_normal = sample_batched["has_anomaly"].detach().numpy()[0, 0]
             anomaly_score_gt.append(is_normal)
@@ -111,21 +103,50 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
                 cnt_display += 1
 
             out_mask_cv = out_mask_sm[0, 1, :, :].detach().cpu().numpy()
-            # 顯示原始圖
-            plt.imshow(gray_rec[0].cpu().detach().permute(1, 2, 0).numpy())
-            plt.title('orignal')
-            plt.savefig(f"{save_root}/orignal_{obj_name}_{i_batch}.png")
-            plt.close()
+
+            # 建立 2x2 圖表
+            fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+            # 顯示重建圖片
+            axes[0, 0].imshow(gray_rec[0].detach().cpu().numpy().transpose(1, 2, 0))
+            axes[0, 0].set_title('Reconstructed Image')
+            axes[0, 0].axis('off')
+
+            # 顯示原始圖片
+            axes[0, 1].imshow(gray_batch[0].detach().cpu().numpy().transpose(1, 2, 0))
+            axes[0, 1].set_title('Original Image')
+            axes[0, 1].axis('off')
+
             # 顯示預測的異常遮罩
-            plt.imshow(out_mask_cv)
-            plt.title('Predicted Anomaly Heatmap')
-            plt.savefig(f"{save_root}/heatmap_{obj_name}_{i_batch}.png")
-            plt.close()
+            axes[1, 0].imshow(out_mask_cv, cmap='hot')
+            axes[1, 0].set_title('Predicted Anomaly Heatmap')
+            axes[1, 0].axis('off')
+
             # 顯示真實的異常遮罩
-            plt.imshow(true_mask[0, 0].detach().cpu().numpy(), cmap='hot')
-            plt.title('true_mask')
-            plt.savefig(f"{save_root}/true_mask_{obj_name}_{i_batch}.png")
+            axes[1, 1].imshow(true_mask[0, 0].detach().cpu().numpy(), cmap='hot')
+            axes[1, 1].set_title('Ground Truth Mask')
+            axes[1, 1].axis('off')
+
+            # 儲存整張圖
+            plt.tight_layout()
+            plt.savefig(f"{save_root}/comparison_{obj_name}_{i_batch}.png")
             plt.close()
+
+            # # 顯示原始圖
+            # plt.imshow(gray_rec[0].cpu().detach().permute(1, 2, 0).numpy())
+            # plt.title('orignal')
+            # plt.savefig(f"{save_root}/orignal_{obj_name}_{i_batch}.png")
+            # plt.close()
+            # # 顯示預測的異常遮罩
+            # plt.imshow(out_mask_cv)
+            # plt.title('Predicted Anomaly Heatmap')
+            # plt.savefig(f"{save_root}/heatmap_{obj_name}_{i_batch}.png")
+            # plt.close()
+            # # 顯示真實的異常遮罩
+            # plt.imshow(true_mask[0, 0].detach().cpu().numpy(), cmap='hot')
+            # plt.title('true_mask')
+            # plt.savefig(f"{save_root}/true_mask_{obj_name}_{i_batch}.png")
+            # plt.close()
 
             out_mask_averaged = torch.nn.functional.avg_pool2d(
                 out_mask_sm[:, 1:, :, :], 21, stride=1,
