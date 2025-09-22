@@ -31,10 +31,12 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
         print("  ⏳ 載入重建模型權重...")
         # model = StudentReconstructiveSubNetwork(in_channels=3, out_channels=3)
         model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
+        # model.load_state_dict(
+        #     torch.load(os.path.join("student_best" + ".pth"),
+        #                map_location='cuda:0'))
         model.load_state_dict(
-            torch.load(os.path.join("student_best" + ".pth"),
+            torch.load(os.path.join(checkpoint_path, run_name + ".pckl"),
                        map_location='cuda:0'))
-        # model.load_state_dict(torch.load(os.path.join(checkpoint_path,run_name+".pckl"), map_location='cuda:0'))
         model.cuda()
         model.eval()
 
