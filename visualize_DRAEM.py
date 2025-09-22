@@ -29,8 +29,8 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
 
         # 載入模型
         print("  ⏳ 載入重建模型權重...")
-        model = StudentReconstructiveSubNetwork(in_channels=3, out_channels=3)
-        # model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
+        # model = StudentReconstructiveSubNetwork(in_channels=3, out_channels=3)
+        model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
         model.load_state_dict(
             torch.load(os.path.join("student_best" + ".pth"),
                        map_location='cuda:0'))
@@ -93,7 +93,8 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
             true_mask_cv = true_mask.detach().numpy()[0, :, :, :].transpose(
                 (1, 2, 0))
 
-            gray_rec, _ = model(gray_batch)
+            # gray_rec, _ = model(gray_batch)
+            gray_rec = model(gray_batch)
             joined_in = torch.cat((gray_rec.detach(), gray_batch), dim=1)
 
             out_mask = model_seg(joined_in)
