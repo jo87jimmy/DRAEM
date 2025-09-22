@@ -14,23 +14,35 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
     obj_auroc_pixel_list = []
     obj_ap_image_list = []
     obj_auroc_image_list = []
-    for obj_name in obj_names:
+
+    print("🔄 開始測試，共有物件類別:", len(obj_names))
+
+    for obj_idx, obj_name in enumerate(obj_names):
+        print(f"\n▶️ [{obj_idx+1}/{len(obj_names)}] 測試物件類別: {obj_name}")
+
         img_dim = 256
         run_name = base_model_name+"_"+obj_name+'_'
 
+        # 載入模型
+        print("  ⏳ 載入重建模型權重...")
         model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
         model.load_state_dict(torch.load(os.path.join(checkpoint_path,run_name+".pckl"), map_location='cuda:0'))
         model.cuda()
         model.eval()
 
+        print("  ⏳ 載入分割模型權重...")
         model_seg = DiscriminativeSubNetwork(in_channels=6, out_channels=2)
         model_seg.load_state_dict(torch.load(os.path.join(checkpoint_path, run_name+"_seg.pckl"), map_location='cuda:0'))
         model_seg.cuda()
         model_seg.eval()
 
-        dataset = MVTecDRAEM_Test_Visual_Dataset(mvtec_path + obj_name + "/test/", resize_shape=[img_dim, img_dim])
+        # 建立 dataset / dataloader
+        data_dir = os.path.join(mvtec_path, obj_name, "test")
+        print(f"  📂 建立 dataset: {data_dir}")
+        dataset = MVTecDRAEM_Test_Visual_Dataset(data_dir, resize_shape=[img_dim, img_dim])
         dataloader = DataLoader(dataset, batch_size=1,
                                 shuffle=False, num_workers=0)
+        print("  ✅ Dataset size:", len(dataset))
 
         total_pixel_scores = np.zeros((img_dim * img_dim * len(dataset)))
         total_gt_pixel_scores = np.zeros((img_dim * img_dim * len(dataset)))
@@ -46,19 +58,22 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
         cnt_display = 0
         display_indices = np.random.randint(len(dataloader), size=(16,))
 
+        print("  🚀 開始遍歷 dataloader...")
 
         for i_batch, sample_batched in enumerate(dataloader):
+            if i_batch % 20 == 0:
+                print(f"    🔹 Batch {i_batch}/{len(dataloader)}")
 
             gray_batch = sample_batched["image"].cuda()
-            # Convert tensor to a numpy array and move it to the CPU
             image = gray_batch.permute(0, 2, 3, 1).cpu().numpy()
 
-            # Display all images in the batch
+            # 存原始圖
             for i in range(image.shape[0]):
                 plt.imshow(image[i], cmap='gray')
                 plt.title('Original Image')
-                plt.savefig(f"original_{i_batch}_{i}.png")   # 存圖
+                plt.savefig(f"original_{obj_name}_{i_batch}_{i}.png")
                 plt.close()
+
             is_normal = sample_batched["has_anomaly"].detach().numpy()[0 ,0]
             anomaly_score_gt.append(is_normal)
             true_mask = sample_batched["mask"]
@@ -70,7 +85,6 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
             out_mask = model_seg(joined_in)
             out_mask_sm = torch.softmax(out_mask, dim=1)
 
-
             if i_batch in display_indices:
                 t_mask = out_mask_sm[:, 1:, :, :]
                 display_images[cnt_display] = gray_rec[0].cpu().detach()
@@ -78,11 +92,12 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
                 display_out_masks[cnt_display] = t_mask[0].cpu().detach()
                 display_in_masks[cnt_display] = true_mask[0].cpu().detach()
                 cnt_display += 1
-            
+
             out_mask_cv = out_mask_sm[0 ,1 ,: ,:].detach().cpu().numpy()
             plt.imshow(out_mask_cv)
             plt.title('Predicted Anomaly Heatmap') 
-            plt.show()
+            plt.savefig(f"heatmap_{obj_name}_{i_batch}.png")
+            plt.close()
 
             out_mask_averaged = torch.nn.functional.avg_pool2d(out_mask_sm[: ,1: ,: ,:], 21, stride=1,
                                                                padding=21 // 2).cpu().detach().numpy()
@@ -95,6 +110,8 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
             total_pixel_scores[mask_cnt * img_dim * img_dim:(mask_cnt + 1) * img_dim * img_dim] = flat_out_mask
             total_gt_pixel_scores[mask_cnt * img_dim * img_dim:(mask_cnt + 1) * img_dim * img_dim] = flat_true_mask
             mask_cnt += 1
+
+        print(f"  ✅ {obj_name} 測試完成，共處理 {len(dataset)} 張影像")
 
 
 if __name__=="__main__":
