@@ -29,14 +29,14 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
 
         # 載入模型
         print("  ⏳ 載入重建模型權重...")
-        model = StudentReconstructiveSubNetwork(in_channels=3, out_channels=3)
-        model.load_state_dict(
-            torch.load(os.path.join("student_best" + ".pth"),
-                       map_location='cuda:0'))
-        # model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
+        # model = StudentReconstructiveSubNetwork(in_channels=3, out_channels=3)
         # model.load_state_dict(
-        #     torch.load(os.path.join(checkpoint_path, run_name + ".pckl"),
+        #     torch.load(os.path.join("student_best" + ".pth"),
         #                map_location='cuda:0'))
+        model = ReconstructiveSubNetwork(in_channels=3, out_channels=3)
+        model.load_state_dict(
+            torch.load(os.path.join(checkpoint_path, run_name + ".pckl"),
+                       map_location='cuda:0'))
         model.cuda()
         model.eval()
 
@@ -108,22 +108,25 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
             fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
             # 顯示重建圖片
-            axes[0, 0].imshow(gray_rec[0].detach().cpu().numpy().transpose(1, 2, 0))
+            axes[0, 0].imshow(gray_rec[0].detach().cpu().numpy().transpose(
+                1, 2, 0))
             axes[0, 0].set_title('Reconstructed Image')
             axes[0, 0].axis('off')
 
             # 顯示原始圖片
-            axes[0, 1].imshow(gray_batch[0].detach().cpu().numpy().transpose(1, 2, 0))
+            axes[0, 1].imshow(gray_batch[0].detach().cpu().numpy().transpose(
+                1, 2, 0))
             axes[0, 1].set_title('Original Image')
             axes[0, 1].axis('off')
 
             # 顯示預測的異常遮罩
-            axes[1, 0].imshow(out_mask_cv, cmap='hot')
+            axes[1, 0].imshow(out_mask_cv)
             axes[1, 0].set_title('Predicted Anomaly Heatmap')
             axes[1, 0].axis('off')
 
             # 顯示真實的異常遮罩
-            axes[1, 1].imshow(true_mask[0, 0].detach().cpu().numpy(), cmap='hot')
+            axes[1, 1].imshow(true_mask[0, 0].detach().cpu().numpy(),
+                              cmap='hot')
             axes[1, 1].set_title('Ground Truth Mask')
             axes[1, 1].axis('off')
 
