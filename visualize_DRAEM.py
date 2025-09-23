@@ -29,7 +29,9 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
 
         # 載入模型
         print("  ⏳ 載入重建模型權重...")
-        model = StudentReconstructiveSubNetwork(in_channels=3, out_channels=3)
+        model = StudentReconstructiveSubNetwork(in_channels=3,
+                                                out_channels=3,
+                                                strict=False)
         model.load_state_dict(
             torch.load(os.path.join("student_best" + ".pth"),
                        map_location='cuda:0'))
@@ -43,10 +45,9 @@ def test(obj_names, mvtec_path, checkpoint_path, base_model_name):
 
         print("  ⏳ 載入分割模型權重...")
         model_seg = DiscriminativeSubNetwork(in_channels=6, out_channels=2)
-        model_seg.load_state_dict(torch.load(os.path.join(
-            checkpoint_path, run_name + "_seg.pckl"),
-                                             map_location='cuda:0'),
-                                  strict=False)
+        model_seg.load_state_dict(
+            torch.load(os.path.join(checkpoint_path, run_name + "_seg.pckl"),
+                       map_location='cuda:0'))
         model_seg.cuda()
         model_seg.eval()
 
