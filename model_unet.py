@@ -24,7 +24,7 @@ class StudentReconstructiveSubNetwork(nn.Module):
                  base_width=64,
                  teacher_base_width=128):
         super().__init__()
-        self.encoder = EncoderReconstructive(in_channels, base_width)
+        self.encoder = EncoderReconstructive2(in_channels, base_width)
         self.decoder = DecoderReconstructive(base_width,
                                              out_channels=out_channels)
 
@@ -52,10 +52,69 @@ class StudentReconstructiveSubNetwork(nn.Module):
         output = self.decoder(feats[-1])  # decoder 只用最後一層 b5
         return output, aligned_feats
 
+
         # feats = self.encoder(x)  # 學生編碼器輸出的特徵
         # aligned_feats = self.feature_align(feats)  # 維度對齊，用來和教師特徵做蒸餾 loss
         # output = self.decoder(feats)  # 解碼器輸入仍是原始學生特徵
         # return output, aligned_feats
+class EncoderReconstructive2(nn.Module):
+
+    def __init__(self, in_channels, base_width):
+        super(EncoderReconstructive2, self).__init__()
+        self.block1 = nn.Sequential(
+            nn.Conv2d(in_channels, base_width, kernel_size=3, padding=1),
+            nn.BatchNorm2d(base_width), nn.ReLU(inplace=True),
+            nn.Conv2d(base_width, base_width, kernel_size=3, padding=1),
+            nn.BatchNorm2d(base_width), nn.ReLU(inplace=True))
+        self.mp1 = nn.Sequential(nn.MaxPool2d(2))
+        self.block2 = nn.Sequential(
+            nn.Conv2d(base_width, base_width * 2, kernel_size=3, padding=1),
+            nn.BatchNorm2d(base_width * 2), nn.ReLU(inplace=True),
+            nn.Conv2d(base_width * 2, base_width * 2, kernel_size=3,
+                      padding=1), nn.BatchNorm2d(base_width * 2),
+            nn.ReLU(inplace=True))
+        self.mp2 = nn.Sequential(nn.MaxPool2d(2))
+        self.block3 = nn.Sequential(
+            nn.Conv2d(base_width * 2, base_width * 4, kernel_size=3,
+                      padding=1), nn.BatchNorm2d(base_width * 4),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(base_width * 4, base_width * 4, kernel_size=3,
+                      padding=1), nn.BatchNorm2d(base_width * 4),
+            nn.ReLU(inplace=True))
+        self.mp3 = nn.Sequential(nn.MaxPool2d(2))
+        self.block4 = nn.Sequential(
+            nn.Conv2d(base_width * 4, base_width * 8, kernel_size=3,
+                      padding=1), nn.BatchNorm2d(base_width * 8),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(base_width * 8, base_width * 8, kernel_size=3,
+                      padding=1), nn.BatchNorm2d(base_width * 8),
+            nn.ReLU(inplace=True))
+        self.mp4 = nn.Sequential(nn.MaxPool2d(2))
+        self.block5 = nn.Sequential(
+            nn.Conv2d(base_width * 8, base_width * 8, kernel_size=3,
+                      padding=1), nn.BatchNorm2d(base_width * 8),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(base_width * 8, base_width * 8, kernel_size=3,
+                      padding=1), nn.BatchNorm2d(base_width * 8),
+            nn.ReLU(inplace=True))
+        # ✅ 正確存通道數
+        self.out_channels = [
+            base_width, base_width * 2, base_width * 4, base_width * 8,
+            base_width * 8
+        ]
+
+    def forward(self, x):
+        b1 = self.block1(x)
+        mp1 = self.mp1(b1)
+        b2 = self.block2(mp1)
+        mp2 = self.mp3(b2)
+        b3 = self.block3(mp2)
+        mp3 = self.mp3(b3)
+        b4 = self.block4(mp3)
+        mp4 = self.mp4(b4)
+        b5 = self.block5(mp4)
+        # return b5
+        return [b1, b2, b3, b4, b5]  # ⬅️ 回傳多層特徵
 
 
 class DiscriminativeSubNetwork(nn.Module):
