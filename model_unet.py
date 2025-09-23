@@ -18,17 +18,44 @@ class ReconstructiveSubNetwork(nn.Module):
 
 class StudentReconstructiveSubNetwork(nn.Module):
 
-    def __init__(self, in_channels=3, out_channels=3, base_width=64):
+    def __init__(self,
+                 in_channels=3,
+                 out_channels=3,
+                 base_width=64,
+                 teacher_base_width=128):
         super().__init__()
-        # 保留原本 encoder/decoder 結構
         self.encoder = EncoderReconstructive(in_channels, base_width)
         self.decoder = DecoderReconstructive(base_width,
                                              out_channels=out_channels)
 
+        # 特徵對齊層：將學生特徵映射到教師特徵維度
+        # self.feature_align = nn.Conv2d(base_width * 8, teacher_base_width * 8,
+        #                                1)
+
+        # 每一層都需要 feature align
+        # 用 encoder.out_channels 建對齊層
+        student_channels = self.encoder.out_channels  # e.g. [64, 128, 256, 512, 512]
+        teacher_channels = [
+            c * (teacher_base_width // base_width) for c in student_channels
+        ]  # e.g. [128, 256, 512, 1024, 1024]
+
+        self.feature_aligns = nn.ModuleList([
+            nn.Conv2d(s_c, t_c, 1)
+            for s_c, t_c in zip(student_channels, teacher_channels)
+        ])
+
     def forward(self, x):
-        feats = self.encoder(x)
-        output = self.decoder(feats[-1])  # 只用最後一層
-        return output
+        feats = self.encoder(x)  # list: [b1, b2, b3, b4, b5]
+        aligned_feats = [
+            align(f) for align, f in zip(self.feature_aligns, feats)
+        ]
+        output = self.decoder(feats[-1])  # decoder 只用最後一層 b5
+        return output, aligned_feats
+
+        # feats = self.encoder(x)  # 學生編碼器輸出的特徵
+        # aligned_feats = self.feature_align(feats)  # 維度對齊，用來和教師特徵做蒸餾 loss
+        # output = self.decoder(feats)  # 解碼器輸入仍是原始學生特徵
+        # return output, aligned_feats
 
 
 class DiscriminativeSubNetwork(nn.Module):
