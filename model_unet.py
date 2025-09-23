@@ -19,14 +19,15 @@ class ReconstructiveSubNetwork(nn.Module):
 class StudentReconstructiveSubNetwork(nn.Module):
 
     def __init__(self, in_channels=3, out_channels=3, base_width=64):
-        super(StudentReconstructiveSubNetwork, self).__init__()
+        super().__init__()
         self.encoder = EncoderReconstructive(in_channels, base_width)
         self.decoder = DecoderReconstructive(base_width,
                                              out_channels=out_channels)
 
     def forward(self, x):
-        b5 = self.encoder(x)
-        output = self.decoder(b5)
+        # 只需要 encoder 最後一層輸出送進 decoder
+        feats = self.encoder(x)  # list: [b1, b2, b3, b4, b5]
+        output = self.decoder(feats[-1])  # decoder 只用最後一層 b5
         return output
 
 
@@ -260,12 +261,6 @@ class EncoderReconstructive(nn.Module):
             nn.Conv2d(base_width * 8, base_width * 8, kernel_size=3,
                       padding=1), nn.BatchNorm2d(base_width * 8),
             nn.ReLU(inplace=True))
-
-        # ✅ 正確存通道數
-        self.out_channels = [
-            base_width, base_width * 2, base_width * 4, base_width * 8,
-            base_width * 8
-        ]
 
     def forward(self, x):
         b1 = self.block1(x)
