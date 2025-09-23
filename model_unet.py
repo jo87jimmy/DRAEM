@@ -16,18 +16,18 @@ class ReconstructiveSubNetwork(nn.Module):
         return output
 
 
-class StudentReconstructiveSubNetwork(nn.Module):
+class StudentReconstructiveSubNetwork_Infer(nn.Module):
 
     def __init__(self, in_channels=3, out_channels=3, base_width=64):
         super().__init__()
+        # 保留原本 encoder/decoder 結構
         self.encoder = EncoderReconstructive(in_channels, base_width)
         self.decoder = DecoderReconstructive(base_width,
                                              out_channels=out_channels)
 
     def forward(self, x):
-        # 只需要 encoder 最後一層輸出送進 decoder
-        feats = self.encoder(x)  # list: [b1, b2, b3, b4, b5]
-        output = self.decoder(feats[-1])  # decoder 只用最後一層 b5
+        feats = self.encoder(x)
+        output = self.decoder(feats[-1])  # 只用最後一層
         return output
 
 
