@@ -16,7 +16,7 @@ class ReconstructiveSubNetwork(nn.Module):
         return output
 
 
-class StudentReconstructiveSubNetwork_Infer(nn.Module):
+class StudentReconstructiveSubNetwork(nn.Module):
 
     def __init__(self, in_channels=3, out_channels=3, base_width=64):
         super().__init__()
